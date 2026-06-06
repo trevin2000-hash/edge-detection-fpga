@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<com.sigasi.hdt.shared.librarymapping.model:LibraryMappings xmlns:com.sigasi.hdt.shared.librarymapping.model="com.sigasi.hdt.vhdl.scoping.librarymapping" Version="2">
+  <Mappings Location="Common Libraries/IEEE" Library="ieee"/>
+  <Mappings Location="Common Libraries/IEEE Synopsys" Library="ieee"/>
+  <Mappings Location="Common Libraries" Library="not mapped"/>
+  <Mappings Location="Common Libraries/STD" Library="std"/>
+  <Mappings Location="rtl/pixel_controller_in.vhd" Library="work"/>
+  <Mappings Location="rtl/pixel_line_buff.vhd" Library="work"/>
+  <Mappings Location="rtl/pkg_edge_detection.vhd" Library="work"/>
+  <Mappings Location="rtl/pkg_sobel.vhd" Library="work"/>
+  <Mappings Location="rtl/rbg_to_greyscale.vhd" Library="work"/>
+  <Mappings Location="tb/tb_pixel_controller_in.sv" Library="work"/>
+  <Mappings Location="tb/tb_rbg_to_greyscale.sv" Library="work"/>
+</com.sigasi.hdt.shared.librarymapping.model:LibraryMappings>
