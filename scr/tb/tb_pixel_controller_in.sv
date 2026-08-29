@@ -1,10 +1,10 @@
-`timescale 1ns / 1ps
 //-----------------------------------------------------------------------------
 // Testbench: tb_pixel_controller_in
 // Description: SystemVerilog testbench for pixel_controller_in (VHDL DUT)
 //              Tests: reset behavior, SOF gating, RGB extraction,
 //                     X/Y counters, EOL/SOF strobes, backpressure
 //-----------------------------------------------------------------------------
+`timescale 1ns / 1ps
 
 module tb_pixel_controller_in;
 
