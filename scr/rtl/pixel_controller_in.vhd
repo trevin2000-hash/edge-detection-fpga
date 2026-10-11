@@ -11,9 +11,6 @@
 -- presented one clock later with pixel_valid_o high. Clocks without an
 -- accepted beat output pixel_valid_o low.
 --
--- s_axis_ready_o follows the downstream ready_i directly. This block has no
--- buffering, so back-pressure from downstream passes straight to the source.
---
 -- The block uses a two-state machine to lock onto the start of a frame:
 --
 --   S_INIT   : Entered after reset. Waits for the first beat with s_axis_sof_i
@@ -138,13 +135,17 @@ begin
 
                             -- increment X pixel position for each pixel
                             -- reset to 0 at the End of the Line
-                            x_cnt <= x_cnt + 1 when s_axis_eol_i = '0' else
-                                (others => '0');
+                            if s_axis_eol_i = '1' then
+                                x_cnt <= (others => '0');
+                            else
+                                x_cnt <= x_cnt + 1;
+                            end if;
 
                             -- increment y pixel position for each line of pixels
                             -- reset to 0 at the Start of the frame
                             if s_axis_sof_i = '1' then
                                 y_cnt <= (others => '0');
+                                y_o   <= (others => '0');
                             elsif s_axis_eol_i = '1' then
                                 y_cnt <= y_cnt + 1;
                             end if;

@@ -1,13 +1,44 @@
 ----------------------------------------------------------------------------------
 -- @file pixel_line_buff.vhd
 -- 
--- @brief This takes greyscale pixel has a input and outputs a valid 3x3 sliding window
--- for convolution
--- 
--- @details 
--- 
+-- @brief Takes a raster stream of greyscale pixels and outputs a 3x3 sliding
+-- window of the most recent pixels for convolution.
+--
+-- @details
+-- Two line buffers hold the previous two lines of the frame. Line buffer 0
+-- holds line y-1 and line buffer 1 holds line y-2. For each input pixel at x,
+-- both buffers are read at x, and the pixel moves down one line: the new pixel
+-- is written into line buffer 0 and the old line buffer 0 value into line
+-- buffer 1. Both buffers are block RAM with registered read data, and their
+-- contents start at zero after configuration.
+--
+-- The window is a shift register. Each new pixel shifts in a column of
+-- line y-2, line y-1 and the current pixel, so window_o(row)(col) holds:
+--
+--   row 0 : line y-2       col 0 : x-2
+--   row 1 : line y-1       col 1 : x-1
+--   row 2 : line y         col 2 : x
+--
+-- pixel_valid_o marks every input pixel, including pixels near the top and
+-- left edges of the frame where the window is not full yet. window_valid_o
+-- is high only when the window also holds a full neighborhood, which is when
+-- the newest pixel has x >= 2 and y >= 2. sof_o and eol_o are the frame
+-- markers of that newest pixel.
+--
+-- Downstream logic must still produce an output pixel for every
+-- pixel_valid_o, even when window_valid_o is low, for example by outputting
+-- zero. Dropping those pixels would leave frames short and move sof and eol
+-- off the right pixels, which breaks the AXI video stream timing.
+--
+-- Latency is two clocks from an input pixel to its window: one for the RAM
+-- read and one for the window register. The outputs only change when a pixel
+-- shifts in.
+--
+-- ready_i is the pipeline clock enable. When it is low, the line buffers and
+-- every register hold their value and the stage stalls. Reset does not
+-- depend on it.
+--
 -- @author Trevin Vaughan
--- 
 ----------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------
@@ -38,11 +69,19 @@ entity pixel_line_buff is
         greyscale_pixel_i : in unsigned(COMPONENT_WIDTH_G - 1 downto 0); -- greyscale pixel
         pixel_valid_i     : in std_logic;                                -- current pixel is valid 
         x_i               : in unsigned(15 downto 0);                    -- current x position the pixel 
-        y_i               : in unsigned(15 downto 0);                    -- current y position the pixel 
+        y_i               : in unsigned(15 downto 0);                    -- current y position the pixel
+        sof_i             : in std_logic;                                -- start of frame
+        eol_i             : in std_logic;                                -- end of line
 
-        -- sliding window
+        -- downstream - sliding window and pixel control
         window_o       : out sliding_window;
-        window_valid_o : out std_logic
+        window_valid_o : out std_logic;
+        pixel_valid_o  : out std_logic;
+        sof_o          : out std_logic; -- start of frame
+        eol_o          : out std_logic; -- end of line
+
+        -- downstream input
+        ready_i : in std_logic -- downstream axi stream ready, pipeline clock enable
     );
 end entity pixel_line_buff;
 
@@ -59,7 +98,7 @@ architecture Behavioral of pixel_line_buff is
     -- signals and registers
     ----------------------------------------------------------------------------------
 
-    -- line buffer for keep the last 2 line of pixels (default value '0')
+    -- line buffer for keep the last 2 line of pixels (initialized a boot to '0')
     signal line_buffer0_r : line_buff_t := (others => (others => '0'));
     signal line_buffer1_r : line_buff_t := (others => (others => '0'));
 
@@ -77,6 +116,8 @@ architecture Behavioral of pixel_line_buff is
     signal x_r               : unsigned(15 downto 0)                    := (others => '0');
     signal y_r               : unsigned(15 downto 0)                    := (others => '0');
     signal pixel_valid_r     : std_logic                                := '0';
+    signal sof_r             : std_logic                                := '0';
+    signal eol_r             : std_logic                                := '0';
 
     -- sliding window register 
     signal window_r : sliding_window;
@@ -94,7 +135,7 @@ begin
     line_buffer0_proc : process (clk_i) is
     begin
         if rising_edge(clk_i) then
-            if (pixel_valid_i = '1') then
+            if (ready_i = '1' and pixel_valid_i = '1') then
                 tap0_r                          <= line_buffer0_r(to_integer(x_i));
                 line_buffer0_r(to_integer(x_i)) <= greyscale_pixel_i;
             end if;
@@ -108,11 +149,11 @@ begin
     line_buffer1_proc : process (clk_i) is
     begin
         if rising_edge(clk_i) then
-            if (pixel_valid_i = '1') then
+            if (ready_i = '1' and pixel_valid_i = '1') then
                 tap1_r <= line_buffer1_r(to_integer(x_i));
             end if;
 
-            if (pixel_valid_r = '1') then
+            if (ready_i = '1' and pixel_valid_r = '1') then
                 line_buffer1_r(to_integer(x_r)) <= tap0_r;
             end if;
         end if;
@@ -129,15 +170,30 @@ begin
                 window_r          <= WINDOW_DEFAULT_C;
                 pixel_valid_r     <= '0';
                 greyscale_pixel_r <= (others => '0');
-            else
+                sof_o             <= '0';
+                eol_o             <= '0';
+                pixel_valid_o     <= '0';
+
+            elsif (ready_i = '1') then
+                -- ready_i is the pipeline clock enable: when low, every
+                -- register holds its value and the stage stalls
 
                 -- delay one clock to match BRAM read latency
                 pixel_valid_r     <= pixel_valid_i;
                 greyscale_pixel_r <= greyscale_pixel_i;
                 x_r               <= x_i;
                 y_r               <= y_i;
+                sof_r             <= sof_i;
+                eol_r             <= eol_i;
+
+                -- assert pixel value for downstream logic
+                pixel_valid_o <= pixel_valid_r;
 
                 if (pixel_valid_r = '1') then
+                    -- frame markers of the newest pixel in the window
+                    sof_o <= sof_r;
+                    eol_o <= eol_r;
+
                     -- sliding window is a shift register fill by the line buffers
                     window_r(0)(2) <= tap1_r;
                     window_r(0)(1) <= window_r(0)(2);

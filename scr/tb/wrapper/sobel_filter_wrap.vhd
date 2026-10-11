@@ -99,9 +99,15 @@ begin
 
             window_i       => window_s,
             window_valid_i => window_valid_i,
+            sof_i          => '0', -- frame markers not exercised by tb_sobel_filter
+            eol_i          => '0',
 
             mag_valid_o => mag_valid_o,
-            mag_o       => mag_o
+            mag_o       => mag_o,
+            sof_o       => open,
+            eol_o       => open,
+
+            ready_i => '1' -- no back-pressure in tb_sobel_filter
         );
 
 end architecture Behavioral;

@@ -92,9 +92,15 @@ begin
             pixel_valid_i     => pixel_valid_i,
             x_i               => unsigned(x_i),
             y_i               => unsigned(y_i),
+            sof_i             => '0', -- frame markers not exercised by tb_sobel_filter
+            eol_i             => '0',
 
             window_o       => window_s,
-            window_valid_o => window_valid_o
+            window_valid_o => window_valid_o,
+            sof_o          => open,
+            eol_o          => open,
+
+            ready_i => '1' -- no back-pressure in tb_sobel_filter
         );
 
     ----------------------------------------------------------------------------------

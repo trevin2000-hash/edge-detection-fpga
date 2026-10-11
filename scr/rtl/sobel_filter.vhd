@@ -1,13 +1,31 @@
 ----------------------------------------------------------------------------------
--- @file pixel_line_buff.vhd
--- 
--- @brief This takes 3x3 sliding window and output the magnitude of edge gradient.
--- 
--- for invalid/not active pixels, mag_o is asserted to zero. therefore the sobel image
--- will have a small black boarder (WINDOW_SIZE_C pixel width). 
--- 
--- @details 
--- 
+-- @file sobel_filter.vhd
+--
+-- @brief Takes a 3x3 sliding window and outputs the magnitude of the edge
+-- gradient at the window's center pixel.
+--
+-- For invalid (not active) windows, mag_o is forced to zero, so edge of the image
+-- has a small black border, WINDOW_SIZE_C - 1 pixels wide.
+--
+-- @details
+-- The filter is a two stage pipeline:
+--
+--   stage 1 : Convolves the window with the horizontal and vertical Sobel
+--             kernels (KERNEL_HORZ_C and KERNEL_VERT_C) to get the gradients
+--             gx and gy. Only updated when window_valid_i is high.
+--
+--   stage 2 : Computes the magnitude as |gx| + |gy|, the Manhattan distance,
+--             which avoids a square root. Forced to zero when stage 1 does not
+--             hold a valid window.
+--
+-- mag_r is scaled to fit into mag_o by keeping its upper COMPONENT_WIDTH_C bits.
+--
+-- Latency is two clocks from window_i to mag_o. sof and eol pass through the
+-- same two registers so they stay aligned with the magnitude.
+--
+-- ready_i is the pipeline clock enable. When it is low, every register holds
+-- its value and the stage stalls. Reset does not depend on it.
+--
 -- @author Trevin Vaughan
 -- 
 ----------------------------------------------------------------------------------
@@ -34,13 +52,21 @@ entity sobel_filter is
         clk_i  : in std_logic; -- axi stream clock
         rstn_i : in std_logic; -- axi stream reset
 
-        -- sliding window input from pixel line buffer
+        -- sliding window and pixel control
         window_i       : in sliding_window;
         window_valid_i : in std_logic;
+        pixel_valid_i  : in std_logic;
+        sof_i          : in std_logic; -- start of frame
+        eol_i          : in std_logic; -- end of line
 
-        -- final output - magnitude of the gradient 
+        -- final output - magnitude of the gradient
         mag_valid_o : out std_logic;
-        mag_o       : out unsigned(COMPONENT_WIDTH_C - 1 downto 0)
+        mag_o       : out unsigned(COMPONENT_WIDTH_C - 1 downto 0);
+        sof_o       : out std_logic; -- start of frame, aligned with mag_o
+        eol_o       : out std_logic; -- end of line, aligned with mag_o
+
+        -- downstream input
+        ready_i : in std_logic -- downstream axi stream ready, pipeline clock enable
     );
 end entity sobel_filter;
 architecture behavioral of sobel_filter is
@@ -54,7 +80,7 @@ architecture behavioral of sobel_filter is
     -- functions
     ----------------------------------------------------------------------------------
     function conv(window : sliding_window; kernel : kernel_t) return signed is
-        variable pixel_v : signed(SIGNED_PIXEL_WIDTH - 1 downto 0); --signed pixel
+        variable pixel_v : signed(SIGNED_PIXEL_WIDTH - 1 downto 0); -- signed pixel
         variable prod_v  : signed(ACC_WIDTH_C - 1 downto 0);        -- product
         variable acc_v   : signed(ACC_WIDTH_C - 1 downto 0);        -- accumulation
     begin
@@ -74,11 +100,23 @@ architecture behavioral of sobel_filter is
     ----------------------------------------------------------------------------------
     -- signals
     ----------------------------------------------------------------------------------
-    signal gx_r           : signed(ACC_WIDTH_C - 1 downto 0);   -- horizontal gradient 
-    signal gy_r           : signed(ACC_WIDTH_C - 1 downto 0);   -- vertical gradient
-    signal stage1_valid_r : std_logic;                          -- 
-    signal stage2_valid_r : std_logic;                          -- magnitude valid  
-    signal mag_r          : unsigned(ACC_WIDTH_C - 1 downto 0); -- magnitude of gradient  
+    signal gx_r                 : signed(ACC_WIDTH_C - 1 downto 0);   -- horizontal gradient 
+    signal gy_r                 : signed(ACC_WIDTH_C - 1 downto 0);   -- vertical gradient
+    signal stage1_valid_r       : std_logic;                          -- gx_r and gy_r valid
+    signal stage2_valid_r       : std_logic;                          -- magnitude valid  
+    signal mag_r                : unsigned(ACC_WIDTH_C - 1 downto 0); -- magnitude of gradient
+    signal stage1_sof_r         : std_logic;                          -- start of frame, stage 1
+    signal stage1_eol_r         : std_logic;                          -- end of line, stage 1
+    signal stage1_pixel_valid_r : std_logic;                          -- pixel valid, stage 1
+    signal stage2_sof_r         : std_logic;                          -- start of frame, stage 2
+    signal stage2_eol_r         : std_logic;                          -- end of line, stage 2
+    signal stage2_pixel_valid_r : std_logic;                          -- pixel valid, stage 2
+
+    ----------------------------------------------------------------------------------
+    -- aliases 
+    ----------------------------------------------------------------------------------
+    -- scale mag_r to fit into mag_o by keeping its upper COMPONENT_WIDTH_C bits
+    alias mag_scaled : unsigned(COMPONENT_WIDTH_C - 1 downto 0) is mag_r(ACC_WIDTH_C - 1 downto ACC_WIDTH_C - COMPONENT_WIDTH_C);
 
 begin
     ----------------------------------------------------------------------------------
@@ -93,8 +131,23 @@ begin
                 mag_r          <= (others => '0');
                 stage1_valid_r <= '0';
                 stage2_valid_r <= '0';
-            else
-                -- default value: 
+                stage1_sof_r   <= '0';
+                stage1_eol_r   <= '0';
+                stage2_sof_r   <= '0';
+                stage2_eol_r   <= '0';
+
+            elsif ready_i = '1' then
+                -- ready_i is the pipeline clock enable: when low, every
+                -- register holds its value and the stage stalls
+
+                -- pixel control signals pipelining
+                stage1_sof_r         <= sof_i;
+                stage1_eol_r         <= eol_i;
+                stage1_pixel_valid_r <= pixel_valid_i;
+
+                stage2_sof_r         <= stage1_sof_r;
+                stage2_eol_r         <= stage1_eol_r;
+                stage2_pixel_valid_r <= stage1_pixel_valid_r;
 
                 -- stage 1 convolve for the horizontal and vertical gradient
                 if window_valid_i = '1' then
@@ -111,7 +164,6 @@ begin
                     stage2_valid_r <= '1';
                 else
                     stage2_valid_r <= '0';
-                    mag_r          <= (others => '0'); -- send zeros for invalid pixels 
                 end if;
 
             end if;
@@ -121,7 +173,12 @@ begin
     ----------------------------------------------------------------------------------
     -- final output
     ----------------------------------------------------------------------------------
-    -- bit shift mag_r to fix inside a 8 bits
-    mag_o       <= mag_r(ACC_WIDTH_C - 1 downto ACC_WIDTH_C - COMPONENT_WIDTH_C);
-    mag_valid_o <= stage2_valid_r;
+    -- border pixels have no full window, so output black instead of being
+    -- dropped: every input pixel still produces an output, which keeps the AXI
+    -- video frame timing intact
+    mag_o <= mag_scaled when stage2_valid_r = '1' else
+        (others => '0');
+    mag_valid_o <= stage2_pixel_valid_r;
+    sof_o       <= stage2_sof_r;
+    eol_o       <= stage2_eol_r;
 end architecture behavioral;
