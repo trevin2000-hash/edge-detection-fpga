@@ -1,0 +1,12 @@
+# Vivado / xsim run artifacts
+vivado*.jou
+vivado*.log
+vivado_pid*.str
+xelab.log
+xelab.pb
+
+# generated test vectors, regenerate from the matlab_prototypes scripts
+matlab_prototypes/*_test_vector.txt
+
+# MATLAB autosave files
+*.asv

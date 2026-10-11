@@ -18,9 +18,9 @@ module tb_rbg_to_greyscale;
   localparam real BLUE_GAIN  = 0.1140;
 
   // Fixed-point gain constants (must match DUT elaboration)
-  localparam int RED_FIX   = int'(RED_GAIN   * (2.0 ** COMPONENT_WIDTH));  // 76
-  localparam int GREEN_FIX = int'(GREEN_GAIN * (2.0 ** COMPONENT_WIDTH));  // 150
-  localparam int BLUE_FIX  = int'(BLUE_GAIN  * (2.0 ** COMPONENT_WIDTH));  // 29
+  localparam int RED_FIX   = int'(RED_GAIN   * (2.0 ** COMPONENT_WIDTH)); // 76
+  localparam int GREEN_FIX = int'(GREEN_GAIN * (2.0 ** COMPONENT_WIDTH)); // 150
+  localparam int BLUE_FIX  = int'(BLUE_GAIN  * (2.0 ** COMPONENT_WIDTH)); // 29
 
   localparam CLK_PERIOD = 10;
 
@@ -51,39 +51,39 @@ module tb_rbg_to_greyscale;
   // Clock generation
   //-------------------------------------------------------------------------
   initial
-    clk = 0;
+  clk = 0;
   always #(CLK_PERIOD / 2) clk = ~clk;
 
   //-------------------------------------------------------------------------
   // DUT instantiation (mixed-language: SV -> VHDL)
   //-------------------------------------------------------------------------
   rbg_to_greyscale #(
-                     .COMPONENT_WIDTH(COMPONENT_WIDTH),
-                     .PIXEL_PER_CLOCK(PIXEL_PER_CLOCK),
-                     .RED_GAIN_FRAC(RED_GAIN),
-                     .GREEN_GAIN_FRAC(GREEN_GAIN),
-                     .BLUE_GAIN_FRAC(BLUE_GAIN)
-                   ) dut (
-                     .clk_i  (clk),
-                     .rstn_i (rstn),
+    .COMPONENT_WIDTH(COMPONENT_WIDTH),
+    .PIXEL_PER_CLOCK(PIXEL_PER_CLOCK),
+    .RED_GAIN_FRAC(RED_GAIN),
+    .GREEN_GAIN_FRAC(GREEN_GAIN),
+    .BLUE_GAIN_FRAC(BLUE_GAIN)
+  ) dut (
+    .clk_i  (clk),
+    .rstn_i (rstn),
 
-                     .r_i (r_in),
-                     .g_i (g_in),
-                     .b_i (b_in),
+    .r_i (r_in),
+    .g_i (g_in),
+    .b_i (b_in),
 
-                     .pixel_valid_i (pixel_valid_in),
-                     .x_i           (x_in),
-                     .y_i           (y_in),
-                     .sof_i         (sof_in),
-                     .eol_i         (eol_in),
+    .pixel_valid_i (pixel_valid_in),
+    .x_i           (x_in),
+    .y_i           (y_in),
+    .sof_i         (sof_in),
+    .eol_i         (eol_in),
 
-                     .greyscale_pixel_o (greyscale_out),
-                     .pixel_valid_o     (pixel_valid_out),
-                     .x_o               (x_out),
-                     .y_o               (y_out),
-                     .sof_o             (sof_out),
-                     .eol_o             (eol_out)
-                   );
+    .greyscale_pixel_o (greyscale_out),
+    .pixel_valid_o     (pixel_valid_out),
+    .x_o               (x_out),
+    .y_o               (y_out),
+    .sof_o             (sof_out),
+    .eol_o             (eol_out)
+  );
 
   //-------------------------------------------------------------------------
   // Test counters
@@ -99,14 +99,14 @@ module tb_rbg_to_greyscale;
   task check(input logic condition, input string msg);
     test_count++;
     if (condition)
-    begin
-      pass_count++;
-    end
+      begin
+        pass_count++;
+      end
     else
-    begin
-      fail_count++;
-      $error("FAIL [%0d]: %s (time=%0t)", test_count, msg, $time);
-    end
+      begin
+        fail_count++;
+        $error("FAIL [%0d]: %s (time=%0t)", test_count, msg, $time);
+      end
   endtask
 
   task wait_clocks(input int n);
@@ -130,10 +130,10 @@ module tb_rbg_to_greyscale;
 
   // Calculate expected greyscale value matching DUT fixed-point math
   function automatic logic [COMPONENT_WIDTH-1:0] expected_grey(
-      input logic [COMPONENT_WIDTH-1:0] r,
-      input logic [COMPONENT_WIDTH-1:0] g,
-      input logic [COMPONENT_WIDTH-1:0] b
-    );
+    input logic [COMPONENT_WIDTH-1:0] r,
+    input logic [COMPONENT_WIDTH-1:0] g,
+    input logic [COMPONENT_WIDTH-1:0] b
+  );
     int sum;
     sum = (int'(r) * RED_FIX) + (int'(g) * GREEN_FIX) + (int'(b) * BLUE_FIX);
     return (sum >> COMPONENT_WIDTH) & {COMPONENT_WIDTH{1'b1}};
@@ -141,15 +141,15 @@ module tb_rbg_to_greyscale;
 
   // Send a pixel and check the output one clock later
   task send_and_check(
-      input logic [COMPONENT_WIDTH-1:0] r,
-      input logic [COMPONENT_WIDTH-1:0] g,
-      input logic [COMPONENT_WIDTH-1:0] b,
-      input logic [15:0]                x,
-      input logic [15:0]                y,
-      input logic                       sof,
-      input logic                       eol,
-      input string                      label
-    );
+    input logic [COMPONENT_WIDTH-1:0] r,
+    input logic [COMPONENT_WIDTH-1:0] g,
+    input logic [COMPONENT_WIDTH-1:0] b,
+    input logic [15:0]                x,
+    input logic [15:0]                y,
+    input logic                       sof,
+    input logic                       eol,
+    input string                      label
+  );
     logic [COMPONENT_WIDTH-1:0] exp;
     exp = expected_grey(r, g, b);
 
@@ -170,18 +170,18 @@ module tb_rbg_to_greyscale;
 
     // Check outputs (one clock latency)
     check(pixel_valid_out === 1'b1,
-          $sformatf("%s: pixel_valid_o should be 1", label));
+      $sformatf("%s: pixel_valid_o should be 1", label));
     check(greyscale_out === exp,
-          $sformatf("%s: grey expected %0d, got %0d (R=%0d G=%0d B=%0d)",
-                    label, exp, greyscale_out, r, g, b));
+      $sformatf("%s: grey expected %0d, got %0d (R=%0d G=%0d B=%0d)",
+      label, exp, greyscale_out, r, g, b));
     check(x_out === x,
-          $sformatf("%s: x expected %0d, got %0d", label, x, x_out));
+      $sformatf("%s: x expected %0d, got %0d", label, x, x_out));
     check(y_out === y,
-          $sformatf("%s: y expected %0d, got %0d", label, y, y_out));
+      $sformatf("%s: y expected %0d, got %0d", label, y, y_out));
     check(sof_out === sof,
-          $sformatf("%s: sof expected %b, got %b", label, sof, sof_out));
+      $sformatf("%s: sof expected %b, got %b", label, sof, sof_out));
     check(eol_out === eol,
-          $sformatf("%s: eol expected %b, got %b", label, eol, eol_out));
+      $sformatf("%s: eol expected %b, got %b", label, eol, eol_out));
   endtask
 
   //-------------------------------------------------------------------------
@@ -194,7 +194,7 @@ module tb_rbg_to_greyscale;
     $display("==========================================================");
     $display("  Testbench: tb_rbg_to_greyscale");
     $display("  Fixed-point gains: R=%0d  G=%0d  B=%0d",
-             RED_FIX, GREEN_FIX, BLUE_FIX);
+      RED_FIX, GREEN_FIX, BLUE_FIX);
     $display("==========================================================");
 
     //---------------------------------------------------------------------
@@ -215,55 +215,55 @@ module tb_rbg_to_greyscale;
     //---------------------------------------------------------------------
     $display("\n--- TEST 2: White pixel ---");
     send_and_check(
-        .r(8'd255), .g(8'd255), .b(8'd255),
-        .x(16'd0), .y(16'd0),
-        .sof(1'b1), .eol(1'b0),
-        .label("White")
-      );
+      .r(8'd255), .g(8'd255), .b(8'd255),
+      .x(16'd0), .y(16'd0),
+      .sof(1'b1), .eol(1'b0),
+      .label("White")
+    );
 
     //---------------------------------------------------------------------
     // TEST 3: Black pixel (0, 0, 0) → 0
     //---------------------------------------------------------------------
     $display("\n--- TEST 3: Black pixel ---");
     send_and_check(
-        .r(8'd0), .g(8'd0), .b(8'd0),
-        .x(16'd1), .y(16'd0),
-        .sof(1'b0), .eol(1'b0),
-        .label("Black")
-      );
+      .r(8'd0), .g(8'd0), .b(8'd0),
+      .x(16'd1), .y(16'd0),
+      .sof(1'b0), .eol(1'b0),
+      .label("Black")
+    );
 
     //---------------------------------------------------------------------
     // TEST 4: Pure red (255, 0, 0) → 76*255 >> 8 = 75
     //---------------------------------------------------------------------
     $display("\n--- TEST 4: Pure red ---");
     send_and_check(
-        .r(8'd255), .g(8'd0), .b(8'd0),
-        .x(16'd2), .y(16'd0),
-        .sof(1'b0), .eol(1'b0),
-        .label("Red")
-      );
+      .r(8'd255), .g(8'd0), .b(8'd0),
+      .x(16'd2), .y(16'd0),
+      .sof(1'b0), .eol(1'b0),
+      .label("Red")
+    );
 
     //---------------------------------------------------------------------
     // TEST 5: Pure green (0, 255, 0) → 150*255 >> 8 = 149
     //---------------------------------------------------------------------
     $display("\n--- TEST 5: Pure green ---");
     send_and_check(
-        .r(8'd0), .g(8'd255), .b(8'd0),
-        .x(16'd3), .y(16'd0),
-        .sof(1'b0), .eol(1'b0),
-        .label("Green")
-      );
+      .r(8'd0), .g(8'd255), .b(8'd0),
+      .x(16'd3), .y(16'd0),
+      .sof(1'b0), .eol(1'b0),
+      .label("Green")
+    );
 
     //---------------------------------------------------------------------
     // TEST 6: Pure blue (0, 0, 255) → 29*255 >> 8 = 28
     //---------------------------------------------------------------------
     $display("\n--- TEST 6: Pure blue ---");
     send_and_check(
-        .r(8'd0), .g(8'd0), .b(8'd255),
-        .x(16'd4), .y(16'd0),
-        .sof(1'b0), .eol(1'b0),
-        .label("Blue")
-      );
+      .r(8'd0), .g(8'd0), .b(8'd255),
+      .x(16'd4), .y(16'd0),
+      .sof(1'b0), .eol(1'b0),
+      .label("Blue")
+    );
 
     //---------------------------------------------------------------------
     // TEST 7: Known value (100, 150, 50)
@@ -272,11 +272,11 @@ module tb_rbg_to_greyscale;
     //---------------------------------------------------------------------
     $display("\n--- TEST 7: Known value (100, 150, 50) ---");
     send_and_check(
-        .r(8'd100), .g(8'd150), .b(8'd50),
-        .x(16'd5), .y(16'd0),
-        .sof(1'b0), .eol(1'b1),
-        .label("Known")
-      );
+      .r(8'd100), .g(8'd150), .b(8'd50),
+      .x(16'd5), .y(16'd0),
+      .sof(1'b0), .eol(1'b1),
+      .label("Known")
+    );
 
     //---------------------------------------------------------------------
     // TEST 8: Strobes deassert after idle
@@ -303,7 +303,7 @@ module tb_rbg_to_greyscale;
 
     // Greyscale output should not have updated to white
     check(pixel_valid_out === 1'b0,
-          "pixel_valid should remain 0 when input valid is low");
+      "pixel_valid should remain 0 when input valid is low");
 
     //---------------------------------------------------------------------
     // TEST 10: Consecutive pixels (pipeline check)
@@ -329,8 +329,8 @@ module tb_rbg_to_greyscale;
     @(posedge clk);
     check(pixel_valid_out === 1'b1, "Consecutive: pixel 1 valid");
     check(greyscale_out === expected_grey(8'd50, 8'd100, 8'd200),
-          $sformatf("Consecutive pixel 1: expected %0d, got %0d",
-                    expected_grey(8'd50, 8'd100, 8'd200), greyscale_out));
+      $sformatf("Consecutive pixel 1: expected %0d, got %0d",
+      expected_grey(8'd50, 8'd100, 8'd200), greyscale_out));
 
     // Pixel 3 — check pixel 2 output
     r_in <= 8'd200;
@@ -339,8 +339,8 @@ module tb_rbg_to_greyscale;
     x_in <= 16'd2;
     @(posedge clk);
     check(greyscale_out === expected_grey(8'd10, 8'd20, 8'd30),
-          $sformatf("Consecutive pixel 2: expected %0d, got %0d",
-                    expected_grey(8'd10, 8'd20, 8'd30), greyscale_out));
+      $sformatf("Consecutive pixel 2: expected %0d, got %0d",
+      expected_grey(8'd10, 8'd20, 8'd30), greyscale_out));
 
     // Pixel 4 — check pixel 3 output
     r_in <= 8'd128;
@@ -350,16 +350,16 @@ module tb_rbg_to_greyscale;
     eol_in <= 1'b1;
     @(posedge clk);
     check(greyscale_out === expected_grey(8'd200, 8'd200, 8'd200),
-          $sformatf("Consecutive pixel 3: expected %0d, got %0d",
-                    expected_grey(8'd200, 8'd200, 8'd200), greyscale_out));
+      $sformatf("Consecutive pixel 3: expected %0d, got %0d",
+      expected_grey(8'd200, 8'd200, 8'd200), greyscale_out));
 
     // Done sending — check pixel 4 output
     pixel_valid_in <= 1'b0;
     eol_in <= 1'b0;
     @(posedge clk);
     check(greyscale_out === expected_grey(8'd128, 8'd64, 8'd32),
-          $sformatf("Consecutive pixel 4: expected %0d, got %0d",
-                    expected_grey(8'd128, 8'd64, 8'd32), greyscale_out));
+      $sformatf("Consecutive pixel 4: expected %0d, got %0d",
+      expected_grey(8'd128, 8'd64, 8'd32), greyscale_out));
     check(eol_out === 1'b1, "Consecutive: eol on last pixel");
 
     //---------------------------------------------------------------------
@@ -392,8 +392,8 @@ module tb_rbg_to_greyscale;
     grey_green = greyscale_out;
 
     check(grey_green > grey_red,
-          $sformatf("Green (%0d) should be brighter than red (%0d)",
-                    grey_green, grey_red));
+      $sformatf("Green (%0d) should be brighter than red (%0d)",
+      grey_green, grey_red));
 
     //---------------------------------------------------------------------
     // Results
@@ -401,7 +401,7 @@ module tb_rbg_to_greyscale;
     wait_clocks(10);
     $display("\n==========================================================");
     $display("  RESULTS: %0d tests, %0d passed, %0d failed",
-             test_count, pass_count, fail_count);
+      test_count, pass_count, fail_count);
     $display("==========================================================");
 
     if (fail_count == 0)

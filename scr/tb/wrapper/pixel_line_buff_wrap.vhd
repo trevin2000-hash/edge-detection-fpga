@@ -45,7 +45,7 @@ use work.pkg_edge_detection.all;
 entity pixel_line_buff_wrap is
     generic (
         COMPONENT_WIDTH_G : integer := COMPONENT_WIDTH_C; -- bits per component in a pixel
-        FRAME_WIDTH_G     : integer := 3840               -- width of a video frame
+        FRAME_WIDTH_G     : integer := 1920               -- width of a video frame
     );
     port (
         -- clock and reset
@@ -79,11 +79,12 @@ begin
     -- device under test
     ----------------------------------------------------------------------------------
     dut : entity work.pixel_line_buff
-        generic map (
+        generic map(
             COMPONENT_WIDTH_G => COMPONENT_WIDTH_G,
             FRAME_WIDTH_G     => FRAME_WIDTH_G
         )
-        port map (
+        port map
+        (
             clk_i  => clk_i,
             rstn_i => rstn_i,
 
@@ -102,8 +103,8 @@ begin
     flatten_rows : for r in 0 to WINDOW_SIZE_C - 1 generate
         flatten_cols : for c in 0 to WINDOW_SIZE_C - 1 generate
             window_o((((r * WINDOW_SIZE_C) + c + 1) * COMPONENT_WIDTH_G) - 1
-                     downto ((r * WINDOW_SIZE_C) + c) * COMPONENT_WIDTH_G)
-                <= std_logic_vector(window_s(r)(c));
+            downto ((r * WINDOW_SIZE_C) + c) * COMPONENT_WIDTH_G)
+            <= std_logic_vector(window_s(r)(c));
         end generate flatten_cols;
     end generate flatten_rows;
 

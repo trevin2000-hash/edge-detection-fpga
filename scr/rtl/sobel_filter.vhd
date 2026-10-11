@@ -3,6 +3,8 @@
 -- 
 -- @brief This takes 3x3 sliding window and output the magnitude of edge gradient.
 -- 
+-- for invalid/not active pixels, mag_o is asserted to zero. therefore the sobel image
+-- will have a small black boarder (WINDOW_SIZE_C pixel width). 
 -- 
 -- @details 
 -- 
@@ -95,7 +97,7 @@ begin
                 -- default value: 
 
                 -- stage 1 convolve for the horizontal and vertical gradient
-                if window_valid_i then
+                if window_valid_i = '1' then
                     gx_r           <= conv(window_i, KERNEL_HORZ_C);
                     gy_r           <= conv(window_i, KERNEL_VERT_C);
                     stage1_valid_r <= '1';
@@ -103,12 +105,13 @@ begin
                     stage1_valid_r <= '0';
                 end if;
 
-                if stage1_valid_r then
+                if stage1_valid_r = '1' then
                     -- calculate the magnitude using Manhattan distance
                     mag_r          <= unsigned(abs(gx_r)) + unsigned(abs(gy_r));
                     stage2_valid_r <= '1';
                 else
                     stage2_valid_r <= '0';
+                    mag_r          <= (others => '0'); -- send zeros for invalid pixels 
                 end if;
 
             end if;

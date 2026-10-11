@@ -33,10 +33,12 @@ package pkg_edge_detection is
     type kernel_row_t is array(0 to WINDOW_SIZE_C - 1) of kernel_coeff_t; -- kernel row 
     type kernel_t is array(0 to WINDOW_SIZE_C - 1) of kernel_row_t;       -- kernel  
 
-    constant KERNEL_VERT_C : kernel_t := ((1, 2, 1), -- row y-2
-    (0, 0, 0),                                       -- row y-1
-    (-1, -2, -1));                                   -- row y
-    constant KERNEL_HORZ_C : kernel_t := ((1, 0, -1),
+    constant KERNEL_VERT_C : kernel_t :=
+    ((1, 2, 1),    -- row y-2
+    (0, 0, 0),     -- row y-1
+    (-1, -2, -1)); -- row y
+    constant KERNEL_HORZ_C : kernel_t :=
+    ((1, 0, -1),
     (2, 0, -2),
     (1, 0, -1));
 end package pkg_edge_detection;
