@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- @file rbg_to_greyscale.vhd
+-- @file rgb_to_greyscale.vhd
 --
 -- @brief Converts an RGB pixel into a greyscale pixel using a weighted sum of
 -- the red, green and blue components.
@@ -25,7 +25,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 use IEEE.NUMERIC_STD.all;
 
-entity rbg_to_greyscale is
+entity rgb_to_greyscale is
     generic (
         COMPONENT_WIDTH : integer := 8;      -- bits per component in a pixel
         PIXEL_PER_CLOCK : integer := 1;      -- pixel per clock cycle  
@@ -62,9 +62,9 @@ entity rbg_to_greyscale is
         ready_i : in std_logic -- downstream axi stream ready
 
     );
-end rbg_to_greyscale;
+end rgb_to_greyscale;
 
-architecture Behavioral of rbg_to_greyscale is
+architecture Behavioral of rgb_to_greyscale is
 
     function to_fixed(
         gain      : real;    -- floating point coefficient (0.0 to 1.0)

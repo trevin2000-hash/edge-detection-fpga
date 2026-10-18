@@ -6,10 +6,13 @@
 -- position, start of frame and end of line.
 --
 -- @details
--- A beat is accepted when s_axis_valid_i and ready_i are both high and
--- aclken_i is high. Each accepted beat is split into r_o, g_o and b_o and
--- presented one clock later with pixel_valid_o high. Clocks without an
--- accepted beat output pixel_valid_o low.
+-- A beat is accepted when s_axis_valid_i and ready_i are both high. Each
+-- accepted beat is split into r_o, g_o and b_o and presented one clock later
+-- with pixel_valid_o high. Clocks without an accepted beat output
+-- pixel_valid_o low.
+--
+-- ready_i is the pipeline clock enable. When it is low, every output register
+-- holds its value and the stage stalls. Reset does not depend on it.
 --
 -- The block uses a two-state machine to lock onto the start of a frame:
 --
@@ -43,12 +46,11 @@ entity pixel_controller_in is
     );
     port (
         -- clocks 
-        aclk_i   : in std_logic; -- axi stream clock
-        aclken_i : in std_logic; -- axi stream clock enable
-        arstn_i  : in std_logic; -- axi stream reset
-        ready_i  : in std_logic; -- downstream axi stream ready
+        aclk_i  : in std_logic; -- axi stream clock
+        arstn_i : in std_logic; -- axi stream reset
+        ready_i : in std_logic; -- downstream ready, pipeline clock enable
 
-        -- AXI Slave Signals
+        -- AXIS Slave Signals
         s_axis_data_i  : in std_logic_vector(DATA_WIDTH - 1 downto 0); -- pixel data
         s_axis_valid_i : in std_logic;                                 -- pixel data valid 
         s_axis_ready_o : out std_logic;                                -- ready for data signal
@@ -83,10 +85,6 @@ begin
     process (aclk_i)
     begin
         if (rising_edge(aclk_i)) then
-            -- update the pixel position
-            x_o <= x_cnt;
-            y_o <= y_cnt;
-
             if (arstn_i = '0') then
                 state         <= S_INIT;
                 pixel_valid_o <= '0';
@@ -95,18 +93,28 @@ begin
                 b_o           <= (others => '0');
                 x_cnt         <= (others => '0');
                 y_cnt         <= (others => '0');
+                x_o           <= (others => '0');
+                y_o           <= (others => '0');
                 sof_o         <= '0';
                 eol_o         <= '0';
 
-            elsif (aclken_i = '1') then
+            elsif (ready_i = '1') then
+                -- ready_i is the pipeline clock enable: when low, every
+                -- output register holds its value and the stage stalls
+
+                -- update the pixel position
+                x_o <= x_cnt;
+                y_o <= y_cnt;
+
                 case state is
                     when S_INIT =>
 
                         if (s_axis_valid_i = '1' and s_axis_sof_i = '1' and ready_i = '1') then
                             --clock in the valid data
+                            -- AXI4-Stream video RGB order: R high, B middle, G low
                             r_o <= s_axis_data_i(3 * COMPONENT_WIDTH - 1 downto 2 * COMPONENT_WIDTH);
-                            g_o <= s_axis_data_i(2 * COMPONENT_WIDTH - 1 downto COMPONENT_WIDTH);
-                            b_o <= s_axis_data_i(COMPONENT_WIDTH - 1 downto 0);
+                            b_o <= s_axis_data_i(2 * COMPONENT_WIDTH - 1 downto COMPONENT_WIDTH);
+                            g_o <= s_axis_data_i(COMPONENT_WIDTH - 1 downto 0);
 
                             x_cnt <= x_cnt + 1;
 
@@ -124,9 +132,10 @@ begin
 
                         if (s_axis_valid_i = '1' and ready_i = '1') then
                             --clock in the valid data
+                            -- AXI4-Stream video RGB order: R high, B middle, G low
                             r_o <= s_axis_data_i(3 * COMPONENT_WIDTH - 1 downto 2 * COMPONENT_WIDTH);
-                            g_o <= s_axis_data_i(2 * COMPONENT_WIDTH - 1 downto COMPONENT_WIDTH);
-                            b_o <= s_axis_data_i(COMPONENT_WIDTH - 1 downto 0);
+                            b_o <= s_axis_data_i(2 * COMPONENT_WIDTH - 1 downto COMPONENT_WIDTH);
+                            g_o <= s_axis_data_i(COMPONENT_WIDTH - 1 downto 0);
 
                             --send down stream control signals
                             pixel_valid_o <= '1';

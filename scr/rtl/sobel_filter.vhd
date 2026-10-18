@@ -4,7 +4,7 @@
 -- @brief Takes a 3x3 sliding window and outputs the magnitude of the edge
 -- gradient at the window's center pixel.
 --
--- For invalid (not active) windows, mag_o is forced to zero, so edge of the image
+-- For windows that are not full, mag_o is forced to zero, so edge of the image
 -- has a small black border, WINDOW_SIZE_C - 1 pixels wide.
 --
 -- @details
@@ -12,11 +12,14 @@
 --
 --   stage 1 : Convolves the window with the horizontal and vertical Sobel
 --             kernels (KERNEL_HORZ_C and KERNEL_VERT_C) to get the gradients
---             gx and gy. Only updated when window_valid_i is high.
+--             gx and gy. Only updated when window_full_i is high.
 --
 --   stage 2 : Computes the magnitude as |gx| + |gy|, the Manhattan distance,
---             which avoids a square root. Forced to zero when stage 1 does not
---             hold a valid window.
+--             which avoids a square root.
+--
+-- mag_valid_o follows window_valid_i through both stages, so every input
+-- window produces exactly one output, full or not. When the window was not
+-- full, mag_o is zero instead of the magnitude.
 --
 -- mag_r is scaled to fit into mag_o by keeping its upper COMPONENT_WIDTH_C bits.
 --
@@ -54,8 +57,8 @@ entity sobel_filter is
 
         -- sliding window and pixel control
         window_i       : in sliding_window;
-        window_valid_i : in std_logic;
-        pixel_valid_i  : in std_logic;
+        window_valid_i : in std_logic; -- a window is present this clock
+        window_full_i  : in std_logic; -- the window holds a full neighborhood
         sof_i          : in std_logic; -- start of frame
         eol_i          : in std_logic; -- end of line
 
@@ -102,15 +105,15 @@ architecture behavioral of sobel_filter is
     ----------------------------------------------------------------------------------
     signal gx_r                 : signed(ACC_WIDTH_C - 1 downto 0);   -- horizontal gradient 
     signal gy_r                 : signed(ACC_WIDTH_C - 1 downto 0);   -- vertical gradient
-    signal stage1_valid_r       : std_logic;                          -- gx_r and gy_r valid
-    signal stage2_valid_r       : std_logic;                          -- magnitude valid  
+    signal stage1_full_r        : std_logic;                          -- window was full, gx_r and gy_r are real
+    signal stage2_full_r        : std_logic;                          -- window was full, mag_r is real
     signal mag_r                : unsigned(ACC_WIDTH_C - 1 downto 0); -- magnitude of gradient
     signal stage1_sof_r         : std_logic;                          -- start of frame, stage 1
     signal stage1_eol_r         : std_logic;                          -- end of line, stage 1
-    signal stage1_pixel_valid_r : std_logic;                          -- pixel valid, stage 1
+    signal stage1_valid_r       : std_logic;                          -- window present, stage 1
     signal stage2_sof_r         : std_logic;                          -- start of frame, stage 2
     signal stage2_eol_r         : std_logic;                          -- end of line, stage 2
-    signal stage2_pixel_valid_r : std_logic;                          -- pixel valid, stage 2
+    signal stage2_valid_r       : std_logic;                          -- window present, stage 2
 
     ----------------------------------------------------------------------------------
     -- aliases 
@@ -129,6 +132,8 @@ begin
                 gx_r           <= (others => '0');
                 gy_r           <= (others => '0');
                 mag_r          <= (others => '0');
+                stage1_full_r  <= '0';
+                stage2_full_r  <= '0';
                 stage1_valid_r <= '0';
                 stage2_valid_r <= '0';
                 stage1_sof_r   <= '0';
@@ -143,27 +148,27 @@ begin
                 -- pixel control signals pipelining
                 stage1_sof_r         <= sof_i;
                 stage1_eol_r         <= eol_i;
-                stage1_pixel_valid_r <= pixel_valid_i;
+                stage1_valid_r <= window_valid_i;
 
                 stage2_sof_r         <= stage1_sof_r;
                 stage2_eol_r         <= stage1_eol_r;
-                stage2_pixel_valid_r <= stage1_pixel_valid_r;
+                stage2_valid_r <= stage1_valid_r;
 
                 -- stage 1 convolve for the horizontal and vertical gradient
-                if window_valid_i = '1' then
+                if window_full_i = '1' then
                     gx_r           <= conv(window_i, KERNEL_HORZ_C);
                     gy_r           <= conv(window_i, KERNEL_VERT_C);
-                    stage1_valid_r <= '1';
+                    stage1_full_r <= '1';
                 else
-                    stage1_valid_r <= '0';
+                    stage1_full_r <= '0';
                 end if;
 
-                if stage1_valid_r = '1' then
+                if stage1_full_r = '1' then
                     -- calculate the magnitude using Manhattan distance
                     mag_r          <= unsigned(abs(gx_r)) + unsigned(abs(gy_r));
-                    stage2_valid_r <= '1';
+                    stage2_full_r <= '1';
                 else
-                    stage2_valid_r <= '0';
+                    stage2_full_r <= '0';
                 end if;
 
             end if;
@@ -176,9 +181,9 @@ begin
     -- border pixels have no full window, so output black instead of being
     -- dropped: every input pixel still produces an output, which keeps the AXI
     -- video frame timing intact
-    mag_o <= mag_scaled when stage2_valid_r = '1' else
+    mag_o <= mag_scaled when stage2_full_r = '1' else
         (others => '0');
-    mag_valid_o <= stage2_pixel_valid_r;
+    mag_valid_o <= stage2_valid_r;
     sof_o       <= stage2_sof_r;
     eol_o       <= stage2_eol_r;
 end architecture behavioral;

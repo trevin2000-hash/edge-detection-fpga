@@ -19,20 +19,21 @@
 --   row 1 : line y-1       col 1 : x-1
 --   row 2 : line y         col 2 : x
 --
--- pixel_valid_o marks every input pixel, including pixels near the top and
--- left edges of the frame where the window is not full yet. window_valid_o
+-- window_valid_o marks every input pixel, including pixels near the top and
+-- left edges of the frame where the window is not full yet. window_full_o
 -- is high only when the window also holds a full neighborhood, which is when
 -- the newest pixel has x >= 2 and y >= 2. sof_o and eol_o are the frame
 -- markers of that newest pixel.
 --
 -- Downstream logic must still produce an output pixel for every
--- pixel_valid_o, even when window_valid_o is low, for example by outputting
+-- window_valid_o, even when window_full_o is low, for example by outputting
 -- zero. Dropping those pixels would leave frames short and move sof and eol
 -- off the right pixels, which breaks the AXI video stream timing.
 --
 -- Latency is two clocks from an input pixel to its window: one for the RAM
--- read and one for the window register. The outputs only change when a pixel
--- shifts in.
+-- read and one for the window register. window_valid_o is high for one clock
+-- per input pixel and low during gaps. The window and the other outputs only
+-- change when a pixel shifts in.
 --
 -- ready_i is the pipeline clock enable. When it is low, the line buffers and
 -- every register hold their value and the stage stalls. Reset does not
@@ -75,8 +76,8 @@ entity pixel_line_buff is
 
         -- downstream - sliding window and pixel control
         window_o       : out sliding_window;
-        window_valid_o : out std_logic;
-        pixel_valid_o  : out std_logic;
+        window_valid_o : out std_logic; -- a window is present this clock
+        window_full_o  : out std_logic; -- the window holds a full neighborhood
         sof_o          : out std_logic; -- start of frame
         eol_o          : out std_logic; -- end of line
 
@@ -166,13 +167,13 @@ begin
     begin
         if rising_edge(clk_i) then
             if (rstn_i = '0') then
-                window_valid_o    <= '0';
+                window_full_o     <= '0';
                 window_r          <= WINDOW_DEFAULT_C;
                 pixel_valid_r     <= '0';
                 greyscale_pixel_r <= (others => '0');
                 sof_o             <= '0';
                 eol_o             <= '0';
-                pixel_valid_o     <= '0';
+                window_valid_o    <= '0';
 
             elsif (ready_i = '1') then
                 -- ready_i is the pipeline clock enable: when low, every
@@ -186,8 +187,8 @@ begin
                 sof_r             <= sof_i;
                 eol_r             <= eol_i;
 
-                -- assert pixel value for downstream logic
-                pixel_valid_o <= pixel_valid_r;
+                -- one window per input pixel, low during gaps
+                window_valid_o <= pixel_valid_r;
 
                 if (pixel_valid_r = '1') then
                     -- frame markers of the newest pixel in the window
@@ -208,10 +209,10 @@ begin
                     window_r(2)(0) <= window_r(2)(1);
 
                     if ((x_r >= WINDOW_SIZE_C - 1) and (y_r >= WINDOW_SIZE_C - 1)) then
-                        -- window valid when window_r is filled 
-                        window_valid_o <= '1';
+                        -- past the first rows and columns, every window position holds a pixel
+                        window_full_o <= '1';
                     else
-                        window_valid_o <= '0';
+                        window_full_o <= '0';
                     end if;
                 end if;
             end if;

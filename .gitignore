@@ -10,3 +10,6 @@ matlab_prototypes/*_test_vector.txt
 
 # MATLAB autosave files
 *.asv
+
+# vscode stuff
+.vscode*
