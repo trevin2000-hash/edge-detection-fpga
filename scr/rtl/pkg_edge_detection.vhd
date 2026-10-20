@@ -12,9 +12,14 @@ use ieee.numeric_std.all;
 
 package pkg_edge_detection is
     ----------------------------------------------------------------------------------
-    -- constants for project
+    -- AXI4-Stream video
     ----------------------------------------------------------------------------------
     constant COMPONENT_WIDTH_C : integer := 8; -- width of component in a pixel
+    constant RGB_COMPONENTS_C  : integer := 3; -- red, green and blue
+    constant PIXEL_PER_CLOCK_C : integer := 1; -- pixels per beat
+
+    -- tdata width of an RGB stream
+    constant AXIS_DATA_WIDTH_C : integer := COMPONENT_WIDTH_C * RGB_COMPONENTS_C * PIXEL_PER_CLOCK_C;
 
     ----------------------------------------------------------------------------------
     -- sliding window

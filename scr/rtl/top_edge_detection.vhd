@@ -20,26 +20,24 @@ use work.pkg_edge_detection.all;
 ----------------------------------------------------------------------------------
 entity top is
     generic (
-        COMPONENT_WIDTH_G : integer := 8;                                           -- how many bits per component in the pixel 
-        PIXEL_PER_CLOCK_G : integer := 1;                                           -- number of pixel per clock cycle  
-        DATA_WIDTH_G      : integer := (COMPONENT_WIDTH_G * 3) * PIXEL_PER_CLOCK_G; -- width of the axi stream
-        FRAME_WIDTH_G     : integer := 1920                                         -- 1080 by 1920 resolution
+        FRAME_WIDTH_G     : integer := 1920; -- 1080 by 1920 resolution
+        AXIS_DATA_WIDTH_G : integer := 24    -- must equal AXIS_DATA_WIDTH_C, the block design cannot read the package
     );
 
     port (
         -- clocks 
-        aclk_i  : in std_logic; -- axi stream clock
-        arstn_i : in std_logic; -- axi stream reset
+        aclk    : in std_logic; -- axi stream clock
+        aresetn : in std_logic; -- axi stream reset, active low
 
         -- AXIS Slave Signals
-        s_axis_tdata  : in std_logic_vector(DATA_WIDTH_G - 1 downto 0); -- RGB pixel data
+        s_axis_tdata  : in std_logic_vector(AXIS_DATA_WIDTH_G - 1 downto 0); -- RGB pixel data
         s_axis_tvalid : in std_logic;                                   -- pixel data valid 
         s_axis_tready : out std_logic;                                  -- ready for data signal
         s_axis_tuser  : in std_logic;                                   -- Start of the frame
         s_axis_tlast  : in std_logic;                                   -- End of the pixel line
 
         -- AXIS Master Signals
-        m_axis_tdata  : out std_logic_vector(DATA_WIDTH_G - 1 downto 0); -- Mono pixel data (Gradient Magnitude)
+        m_axis_tdata  : out std_logic_vector(AXIS_DATA_WIDTH_G - 1 downto 0); -- Mono pixel data (Gradient Magnitude)
         m_axis_tvalid : out std_logic;                                   -- pixel data valid 
         m_axis_tready : in std_logic;                                    -- ready for data signal
         m_axis_tuser  : out std_logic;                                   -- Start of the frame
@@ -64,9 +62,9 @@ architecture Behavioral of top is
     -- pixel control in signals 
     ----------------------------------------------------------------------------------
     signal rgb_valid_s      : std_logic;
-    signal r_s              : std_logic_vector(COMPONENT_WIDTH_G - 1 downto 0);
-    signal g_s              : std_logic_vector(COMPONENT_WIDTH_G - 1 downto 0);
-    signal b_s              : std_logic_vector(COMPONENT_WIDTH_G - 1 downto 0);
+    signal r_s              : std_logic_vector(COMPONENT_WIDTH_C - 1 downto 0);
+    signal g_s              : std_logic_vector(COMPONENT_WIDTH_C - 1 downto 0);
+    signal b_s              : std_logic_vector(COMPONENT_WIDTH_C - 1 downto 0);
     signal x_rgb_position_s : unsigned(15 downto 0);
     signal y_rbg_position_s : unsigned(15 downto 0);
     signal sof_rgb_s        : std_logic;
@@ -75,7 +73,7 @@ architecture Behavioral of top is
     ----------------------------------------------------------------------------------
     -- RGB to greyscale signals 
     ----------------------------------------------------------------------------------    
-    signal greyscale_s            : unsigned(COMPONENT_WIDTH_G - 1 downto 0);
+    signal greyscale_s            : unsigned(COMPONENT_WIDTH_C - 1 downto 0);
     signal greyscale_valid_s      : std_logic;
     signal x_greyscale_position_s : unsigned(15 downto 0);
     signal y_greyscale_position_s : unsigned(15 downto 0);
@@ -98,22 +96,28 @@ architecture Behavioral of top is
 begin
 
     ----------------------------------------------------------------------------------
-    -- combination logic 
+    -- combination logic
     ----------------------------------------------------------------------------------
+
+    -- the stream width is a generic only so the block design can size the ports;
+    -- every stage is built from AXIS_DATA_WIDTH_C, so stop on a mismatch
+    assert AXIS_DATA_WIDTH_G = AXIS_DATA_WIDTH_C
+        report "AXIS_DATA_WIDTH_G does not match AXIS_DATA_WIDTH_C in pkg_edge_detection"
+        severity failure;
 
     ----------------------------------------------------------------------------------
     -- Pixel Control in
     ----------------------------------------------------------------------------------
     pixel_controller_in_inst : entity work.pixel_controller_in
         generic map(
-            COMPONENT_WIDTH => COMPONENT_WIDTH_G,
-            PIXEL_PER_CLOCK => PIXEL_PER_CLOCK_G,
-            DATA_WIDTH      => DATA_WIDTH_G
+            COMPONENT_WIDTH => COMPONENT_WIDTH_C,
+            PIXEL_PER_CLOCK => PIXEL_PER_CLOCK_C,
+            DATA_WIDTH      => AXIS_DATA_WIDTH_G
         )
         port map
         (
-            aclk_i         => aclk_i,
-            arstn_i        => arstn_i,
+            aclk_i         => aclk,
+            arstn_i        => aresetn,
             ready_i        => ready_s,
             s_axis_data_i  => s_axis_tdata,
             s_axis_valid_i => s_axis_tvalid,
@@ -135,13 +139,13 @@ begin
     ----------------------------------------------------------------------------------
     rgb_to_greyscale_inst : entity work.rgb_to_greyscale
         generic map(
-            COMPONENT_WIDTH => COMPONENT_WIDTH_G,
-            PIXEL_PER_CLOCK => PIXEL_PER_CLOCK_G
+            COMPONENT_WIDTH => COMPONENT_WIDTH_C,
+            PIXEL_PER_CLOCK => PIXEL_PER_CLOCK_C
         )
         port map
         (
-            clk_i             => aclk_i,
-            rstn_i            => arstn_i,
+            clk_i             => aclk,
+            rstn_i            => aresetn,
             r_i               => unsigned(r_s),
             g_i               => unsigned(g_s),
             b_i               => unsigned(b_s),
@@ -164,13 +168,13 @@ begin
     ----------------------------------------------------------------------------------
     pixel_line_buff_inst : entity work.pixel_line_buff
         generic map(
-            COMPONENT_WIDTH_G => COMPONENT_WIDTH_G,
+            COMPONENT_WIDTH_G => COMPONENT_WIDTH_C,
             FRAME_WIDTH_G     => FRAME_WIDTH_G
         )
         port map
         (
-            clk_i             => aclk_i,
-            rstn_i            => arstn_i,
+            clk_i             => aclk,
+            rstn_i            => aresetn,
             greyscale_pixel_i => greyscale_s,
             pixel_valid_i     => greyscale_valid_s,
             x_i               => x_greyscale_position_s,
@@ -193,8 +197,8 @@ begin
         )
         port map
         (
-            clk_i          => aclk_i,
-            rstn_i         => arstn_i,
+            clk_i          => aclk,
+            rstn_i         => aresetn,
             window_i       => window_s,
             window_valid_i => window_valid_s,
             window_full_i  => window_full_s,
@@ -212,14 +216,14 @@ begin
     ----------------------------------------------------------------------------------
     pixel_controller_out_inst : entity work.pixel_controller_out
         generic map(
-            COMPONENT_WIDTH => COMPONENT_WIDTH_G,
-            PIXEL_PER_CLOCK => PIXEL_PER_CLOCK_G,
-            DATA_WIDTH      => DATA_WIDTH_G
+            COMPONENT_WIDTH => COMPONENT_WIDTH_C,
+            PIXEL_PER_CLOCK => PIXEL_PER_CLOCK_C,
+            DATA_WIDTH      => AXIS_DATA_WIDTH_G
         )
         port map
         (
-            aclk_i         => aclk_i,
-            arstn_i        => arstn_i,
+            aclk_i         => aclk,
+            arstn_i        => aresetn,
             ready_o        => ready_s,
             pixel_valid_i  => mag_valid_s,
             pixel_i        => std_logic_vector(mag_s),

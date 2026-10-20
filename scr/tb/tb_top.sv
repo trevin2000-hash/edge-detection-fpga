@@ -43,8 +43,8 @@ module tb_top;
     //-------------------------------------------------------------------------
     localparam real CLK_PERIOD      = 4.0;                 // 250 MHz
     localparam real DRIVE_DELAY     = 1.0;                 // drive this long after the rising edge
-    localparam int  COMPONENT_WIDTH = 8;                   // must match COMPONENT_WIDTH_G of top
-    localparam int  DATA_WIDTH      = COMPONENT_WIDTH * 3; // must match DATA_WIDTH_G of top
+    localparam int  COMPONENT_WIDTH = 8;                   // must match COMPONENT_WIDTH_C in pkg_edge_detection
+    localparam int  DATA_WIDTH      = COMPONENT_WIDTH * 3; // must match AXIS_DATA_WIDTH_C in pkg_edge_detection
     localparam int  HEAVY_PCT       = 50;                  // percent of clocks valid or ready is high, heavy stalls
     localparam int  LIGHT_PCT       = 75;                  // percent of clocks valid or ready is high, light stalls
     localparam int  FRAME_GAP       = 100;                 // idle clocks between frames in the gap scenario
@@ -101,8 +101,8 @@ module tb_top;
     // DUT
     //-------------------------------------------------------------------------
     top dut (
-        .aclk_i        (aclk),
-        .arstn_i       (arstn),
+        .aclk          (aclk),
+        .aresetn       (arstn),
 
         .s_axis_tdata  (s_axis_tdata),
         .s_axis_tvalid (s_axis_tvalid),
@@ -268,11 +268,7 @@ module tb_top;
             $display("tb_top: output ended part way through a frame, at pixel %0d", exp_index);
         end
 
-        if (pass) begin
-            $display("tb_top: PASS");
-        end else begin
-            $display("tb_top: FAIL");
-        end
+        $display(pass ? "tb_top: PASS" : "tb_top: FAIL");
     endfunction
 
     //-------------------------------------------------------------------------
