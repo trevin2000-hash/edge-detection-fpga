@@ -1,0 +1,3 @@
+[submodule "petalinux/project-spec/meta-avnet"]
+	path = petalinux/project-spec/meta-avnet
+	url = https://github.com/Avnet/meta-avnet.git
