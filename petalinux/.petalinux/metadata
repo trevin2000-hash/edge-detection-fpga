@@ -1,7 +1,7 @@
 PETALINUX_VER=2022.2
 VALIDATE_HW_CHKSUM=1
-HARDWARE_PATH=/home/petalinux/Documents/Avnet_2022_2/hdl/projects/u96v2_sbc_base_2022_2/u96v2_sbc_base.xsa
+HARDWARE_PATH=/home/petalinux/Documents/edge_detection/edge_detection.xsa
 HDF_EXT=xsa
-HARDWARE_CHECKSUM=bf1b8541866276e89232b31cfb172b83
+HARDWARE_CHECKSUM=6f7c731c4e3154e2257dcdd3e5dcddb8
 YOCTO_SDK=4ade5db6317c61f6cb657b7a919dfa25
-RFSCONFIG_CHKSUM=c821c9d2291152b9be8dd7507a2ba66e
+RFSCONFIG_CHKSUM=44d4adac8e66bccf2fda5fd4fccb3469

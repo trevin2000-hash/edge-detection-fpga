@@ -475,7 +475,7 @@ CONFIG_mtd-utils=y
 #
 # dtc 
 #
-# CONFIG_dtc is not set
+CONFIG_dtc=y
 # CONFIG_dtc-dbg is not set
 # CONFIG_dtc-misc is not set
 # CONFIG_dtc-dev is not set
@@ -593,7 +593,7 @@ CONFIG_nfs-utils=y
 #
 # rsync 
 #
-# CONFIG_rsync is not set
+CONFIG_rsync=y
 # CONFIG_rsync-dev is not set
 # CONFIG_rsync-dbg is not set
 
@@ -3168,7 +3168,7 @@ CONFIG_tcf-agent=y
 # CONFIG_v4l-utils is not set
 # CONFIG_libv4l is not set
 # CONFIG_ir-keytable is not set
-# CONFIG_media-ctl is not set
+CONFIG_media-ctl=y
 # CONFIG_v4l-utils-dbg is not set
 # CONFIG_rc-keymaps is not set
 # CONFIG_v4l-utils-dev is not set
@@ -3434,8 +3434,8 @@ CONFIG_watchdog-init=y
 #
 # gstreamer1.0 
 #
-# CONFIG_gstreamer1.0 is not set
-# CONFIG_gstreamer1.0-dev is not set
+CONFIG_gstreamer1.0=y
+CONFIG_gstreamer1.0-dev=y
 # CONFIG_gstreamer1.0-dbg is not set
 
 #
@@ -3628,7 +3628,7 @@ CONFIG_u-boot-tools=y
 #
 # xserver-xorg 
 #
-# CONFIG_xserver-xorg is not set
+CONFIG_xserver-xorg=y
 # CONFIG_xserver-xorg-module-exa is not set
 # CONFIG_xserver-xorg-module-libint10 is not set
 # CONFIG_xserver-xorg-extension-record is not set
@@ -3640,7 +3640,7 @@ CONFIG_u-boot-tools=y
 # CONFIG_xserver-xorg-extension-dbe is not set
 # CONFIG_xserver-xorg-extension-glx is not set
 # CONFIG_xserver-xorg-xvfb is not set
-# CONFIG_xserver-xorg-utils is not set
+CONFIG_xserver-xorg-utils=y
 # CONFIG_xserver-xorg-dbg is not set
 # CONFIG_xserver-xorg-extension-extmod is not set
 
@@ -3964,8 +3964,8 @@ CONFIG_u-boot-tools=y
 #
 # packagegroup-petalinux-gstreamer 
 #
-# CONFIG_packagegroup-petalinux-gstreamer is not set
-# CONFIG_packagegroup-petalinux-gstreamer-dev is not set
+CONFIG_packagegroup-petalinux-gstreamer=y
+CONFIG_packagegroup-petalinux-gstreamer-dev=y
 # CONFIG_packagegroup-petalinux-gstreamer-dbg is not set
 
 #
@@ -4027,8 +4027,8 @@ CONFIG_u-boot-tools=y
 #
 # packagegroup-petalinux-opencv 
 #
-# CONFIG_packagegroup-petalinux-opencv is not set
-# CONFIG_packagegroup-petalinux-opencv-dev is not set
+CONFIG_packagegroup-petalinux-opencv=y
+CONFIG_packagegroup-petalinux-opencv-dev=y
 # CONFIG_packagegroup-petalinux-opencv-dbg is not set
 
 #
@@ -4056,9 +4056,9 @@ CONFIG_u-boot-tools=y
 #
 # packagegroup-petalinux-self-hosted 
 #
-# CONFIG_packagegroup-petalinux-self-hosted is not set
+CONFIG_packagegroup-petalinux-self-hosted=y
 # CONFIG_packagegroup-petalinux-self-hosted-dbg is not set
-# CONFIG_packagegroup-petalinux-self-hosted-dev is not set
+CONFIG_packagegroup-petalinux-self-hosted-dev=y
 
 #
 # packagegroup-petalinux-utils 
@@ -4070,9 +4070,9 @@ CONFIG_u-boot-tools=y
 #
 # packagegroup-petalinux-v4lutils 
 #
-# CONFIG_packagegroup-petalinux-v4lutils is not set
+CONFIG_packagegroup-petalinux-v4lutils=y
 # CONFIG_packagegroup-petalinux-v4lutils-dbg is not set
-# CONFIG_packagegroup-petalinux-v4lutils-dev is not set
+CONFIG_packagegroup-petalinux-v4lutils-dev=y
 
 #
 # packagegroup-petalinux-vitis-acceleration 
@@ -4091,7 +4091,7 @@ CONFIG_u-boot-tools=y
 #
 # packagegroup-petalinux-x11 
 #
-# CONFIG_packagegroup-petalinux-x11 is not set
+CONFIG_packagegroup-petalinux-x11=y
 # CONFIG_packagegroup-petalinux-x11-dev is not set
 # CONFIG_packagegroup-petalinux-x11-dbg is not set
 
@@ -4108,9 +4108,11 @@ CONFIG_u-boot-tools=y
 CONFIG_imagefeature-ssh-server-dropbear=y
 # CONFIG_imagefeature-ssh-server-openssh is not set
 CONFIG_imagefeature-hwcodecs=y
-# CONFIG_imagefeature-package-management is not set
-# CONFIG_imagefeature-debug-tweaks is not set
-# CONFIG_auto-login is not set
+CONFIG_imagefeature-package-management=y
+CONFIG_package-feed-uris=""
+CONFIG_package-feed-archs=""
+CONFIG_imagefeature-debug-tweaks=y
+CONFIG_auto-login=y
 CONFIG_Init-manager-systemd=y
 # CONFIG_Init-manager-sysvinit is not set
 
@@ -4118,7 +4120,7 @@ CONFIG_Init-manager-systemd=y
 # user packages 
 #
 # CONFIG_gpio-demo is not set
-# CONFIG_peekpoke is not set
+CONFIG_peekpoke=y
 
 #
 # PetaLinux RootFS Settings
